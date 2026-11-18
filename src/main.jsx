@@ -12,7 +12,13 @@ createRoot(document.getElementById("root")).render(
   <QueryClientProvider client={queryClient}>
     <Provider store={store}>
       <AppRoutes />
-      <ToastContainer />
+      <ToastContainer
+        position="top-right"
+        theme="dark"
+        autoClose={3500}
+        newestOnTop
+        pauseOnFocusLoss={false}
+      />
     </Provider>
   </QueryClientProvider>,
 );
