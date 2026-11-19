@@ -1,3 +1,4 @@
+import { useSelector } from "react-redux";
 import { createBrowserRouter, Navigate, RouterProvider } from "react-router";
 import AuthLayout from "../layouts/AuthLayout";
 import MainLayout from "../layouts/MainLayout";
@@ -47,6 +48,25 @@ const router = createBrowserRouter([
   },
 ]);
 
-const AppRoutes = () => <RouterProvider router={router} />;
+// Hold rendering until the session restore on page load has settled, so pages
+// never briefly render as logged-out for a user who is actually signed in.
+const AppRoutes = () => {
+  const status = useSelector((state) => state.auth.status);
+
+  if (status === "checking") {
+    return (
+      <div
+        className="flex min-h-screen items-center justify-center"
+        role="status"
+        aria-live="polite"
+      >
+        <span className="size-10 animate-spin rounded-full border-2 border-neutral-200 border-t-ink" />
+        <span className="sr-only">Loading…</span>
+      </div>
+    );
+  }
+
+  return <RouterProvider router={router} />;
+};
 
 export default AppRoutes;

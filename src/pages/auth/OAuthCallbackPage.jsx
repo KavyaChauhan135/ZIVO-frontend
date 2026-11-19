@@ -1,9 +1,8 @@
 import { useEffect, useRef } from "react";
-import { useDispatch } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import { useNavigate, useSearchParams } from "react-router";
 import { toast } from "react-toastify";
-import { getMeApi, refreshApi } from "../../api/authApi";
-import { setCredentials } from "../../features/authSlice";
+import { restoreSession } from "../../features/authThunks";
 import { getErrorMessage } from "../../utils/apiError";
 
 /**
@@ -15,6 +14,7 @@ const OAuthCallbackPage = () => {
   const [params] = useSearchParams();
   const navigate = useNavigate();
   const dispatch = useDispatch();
+  const user = useSelector((state) => state.auth.user);
   // Refresh tokens are single-use: never run the exchange twice.
   const started = useRef(false);
 
@@ -34,23 +34,28 @@ const OAuthCallbackPage = () => {
       return;
     }
 
-    (async () => {
-      try {
-        const { data: tokens } = await refreshApi();
-        const { data: me } = await getMeApi(tokens.accessToken);
-        dispatch(
-          setCredentials({ user: me.user, accessToken: tokens.accessToken }),
-        );
-        const firstName = me.user?.name?.split(" ")[0];
-        toast.success(firstName ? `Welcome, ${firstName}!` : "Signed in");
-        navigate("/", { replace: true });
-      } catch (err) {
+    const welcome = (user) => {
+      const firstName = user?.name?.split(" ")[0];
+      toast.success(firstName ? `Welcome, ${firstName}!` : "Signed in");
+      navigate("/", { replace: true });
+    };
+
+    // The page-load session restore (main.jsx) has already exchanged the new
+    // cookie, so normally the user is in the store by now.
+    if (user) {
+      welcome(user);
+      return;
+    }
+
+    // Fallback: try once more (restoreSession is safe against overlapping calls).
+    dispatch(restoreSession())
+      .then(welcome)
+      .catch((err) =>
         failWith(
           getErrorMessage(err, "We couldn't complete Google sign-in. Please try again."),
-        );
-      }
-    })();
-  }, [params, navigate, dispatch]);
+        ),
+      );
+  }, [params, navigate, dispatch, user]);
 
   return (
     <div
